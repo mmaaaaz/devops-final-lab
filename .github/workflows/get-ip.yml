@@ -1,0 +1,25 @@
+name: Get Public IP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get-ip:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Get IP
+      run: |
+        sleep 30
+        TASK_ARN=$(aws ecs list-tasks --cluster devops-lab-cluster --service-name devops-lab-service --query 'taskArns[0]' --output text)
+        echo "TASK ARN: $TASK_ARN"
+        ENI_ID=$(aws ecs describe-tasks --cluster devops-lab-cluster --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
+        echo "ENI ID: $ENI_ID"
+        PUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI_ID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+        echo "Public IP is: $PUBLIC_IP"
